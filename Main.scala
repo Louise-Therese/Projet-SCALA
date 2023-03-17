@@ -49,9 +49,8 @@ object Main extends App {
       case "dummy2" => Canvas.dummy2
       case "new_canvas" => Canvas.new_Canvas
       case "update_pixel" => Canvas.update_pixel
-      case "draw_fill_recursive" =>Canvas.draw_fill_recursive
+      case "draw_fill" =>Canvas.draw_fill
       case "drawLine" =>Canvas.drawLine
-      case "drawLine1" =>Canvas.drawLine1
       case "load_image" => Canvas.load_image
       case "drawRectangle" => Canvas.drawRectangle
 
@@ -138,12 +137,11 @@ case class Canvas(width: Int = 0, height: Int = 0, pixels: Vector[Vector[Pixel]]
    * in the right position with its color
    */
   def update(pixel: Pixel): Canvas = {
-    
+    //Utilisation de la fonction updated pour la MAJ d'un pixel
     val newPixels = pixels.updated(pixel.y,pixels(pixel.y).updated(pixel.x,pixel))
     this.copy(pixels = newPixels)
   }
 
-//val nouveauVecteurDeVecteurs = vecteurDeVecteurs.updated(positionLigne, vecteurDeVecteurs(positionLigne).updated(positionColonne, nouvelElement))
   /**
    * Return a Canvas containing all modifications
    */
@@ -159,11 +157,14 @@ case class Canvas(width: Int = 0, height: Int = 0, pixels: Vector[Vector[Pixel]]
         this.copy(pixels = newPixels)
 
       } else {
-        this // faire un jeu de test avec elle pour retourner une autre couleur 
+        this 
         
       }
 
   }
+     /**
+   * Return a Canvas containing all modifications after changing color for one pixel
+   */
     def update_color1(pixel: Pixel, newPixel:Pixel): Canvas = {
 
       val newPixels = pixels.updated(pixel.y,pixels(pixel.y).updated(pixel.x,newPixel))
@@ -171,8 +172,6 @@ case class Canvas(width: Int = 0, height: Int = 0, pixels: Vector[Vector[Pixel]]
      }
 
 
-
-  //val updatedMatrix = pixelsMatrix.updated(rowIndex, pixelsMatrix(rowIndex).updated(columnIndex, pixelsMatrix(rowIndex)(columnIndex).copy(color = newColor)))
 
   def updates_color(pixels: Seq[Pixel],newPixel : Pixel,firstColor: Char): Canvas = {
     pixels.foldLeft(this)((f, p) => f.update_color(p,newPixel,firstColor))
@@ -237,143 +236,156 @@ object Canvas {
     }
 
   // TODO: Add any useful method
-  def new_Canvas(arguments: Seq [String], canvas: Canvas): (Canvas, Status) =
-    if (arguments.size == 3) {     
-      val width = arguments(0).toInt
-      val height = arguments(1).toInt
-      val char =  arguments(2).charAt(0) 
-      
-      val newPixels = Vector.tabulate(height, width) { case (i, j) => Pixel(i, j, char) }
-      val newCanvas = Canvas(width, height, newPixels)
-      (newCanvas, Status())
-    }         
+
+  //*****************Function new_Canvas**********************
+
+
+  def new_Canvas(arguments: Seq[String], canvas: Canvas): (Canvas, Status) =  
+    if (arguments.size == 3) {        
+        // On convertit les chaînes de caractères en entier et on affecte chaque chaine à une variable
+        val width = arguments(0).toInt         
+        val height = arguments(1).toInt        
+        val char =  arguments(2).charAt(0) 
+        
+        // On crée un nouveau vecteur de pixels en utilisant la méthode tabulate de l'objet Vector
+        val newPixels = Vector.tabulate(height, width) { case (i, j) => Pixel(i, j, char) }
+        
+        // On crée un nouvel objet de type Canvas en utilisant le constructeur de la classe Canvas
+        // On passe en argument la largeur, la hauteur et le vecteur de pixels créé précédemment
+        val newCanvas = Canvas(width, height, newPixels)        
+        (newCanvas, Status())
+    }      
+    // Si la taille de la séquence arguments n'est pas égale à 3, on exécute le bloc suivant.
     else
-      (canvas, Status(error = true, message = "new_Canvas action does not excpect arguments"))
+      (canvas, Status(error = true, message = "new_Canvas action does not expect arguments"))
+
+
+
+      //**********Function load_image***************
 
   def load_image(arguments: Seq[String], canvas: Canvas): (Canvas, Status) =
     if (arguments.size < 1)
       (canvas, Status(error = true, message = "La commande load_image attend 1 argument. Or vous en avez donne 0"))
     else {
       val fileName = arguments(0)
-      try {
-        val lines: Vector[String] = Source.fromFile(fileName).getLines().toVector
-        val pixels = lines.map { line =>
-          line.map(char => Pixel(0, 0, char)).toVector
-        }
-        val newCanvas = Canvas(pixels(0).size, pixels.size, pixels)
-       // printCanvas(newCanvas)
-        (newCanvas, Status())
-      } catch {
-        case e: Exception => (canvas, Status(error = true, message = s"Erreur de chargement de l'image: $e. Verifiez que le fichier existe et que vous avez les droits d'accès."))
+    // Essayer de charger le fichier et récupérer son contenu sous forme de lignes
+    try {
+      val lines: Vector[String] = Source.fromFile(fileName).getLines().toVector
+      // Convertir chaque ligne en une séquence de pixels
+      val pixels = lines.map { line =>
+        line.map(char => Pixel(0, 0, char)).toVector
       }
+      // Créer un nouveau canvas avec la séquence de pixels créée
+      val newCanvas = Canvas(pixels(0).size, pixels.size, pixels)
+      (newCanvas, Status())
+    } catch {
+      
+      case e: Exception => (canvas, Status(error = true, message = s"Erreur"))
     }
+  }
   
-
+      //***************Function update_pixel********************
   
     def update_pixel(arguments: Seq[String], canvas: Canvas): (Canvas, Status) = 
-    if (arguments.size > 2) 
-      (canvas, Status(error = true, message = "dummy action does not excpect more than two arguments"))
-    else  {
-      val updatedCanvas=canvas.update(Pixel(arguments(0),arguments(1).charAt(0)))      
-      (updatedCanvas, Status())
+      if (arguments.size > 2) 
+        (canvas, Status(error = true, message = "dummy action does not excpect more than two arguments"))
+      else  {
+        val updatedCanvas=canvas.update(Pixel(arguments(0),arguments(1).charAt(0)))      
+        (updatedCanvas, Status())
     }
 
- 
+    //**************Function drawLine*********************
 
-  def draw_fill_recursive(arguments: Seq [String], canvas: Canvas): (Canvas, Status) = {
-  //val currentColor = Pixel(arguments(0)).color
-  val currentColor = Pixel(arguments(0)).color
-  val newColor=arguments(1).charAt(0) 
-  val pixel = Pixel(arguments(0))
-  if (currentColor == newColor) {
-    (canvas, Status()) // If the pixel already has the new color, return the canvas unchanged
-  } else {
-    val filledCanvas = canvas.update(pixel.copy(color = newColor)) // Update the current pixel with the new color
-    val adjacentPixels = List((pixel.x - 1, pixel.y), (pixel.x + 1, pixel.y), (pixel.x, pixel.y - 1), (pixel.x, pixel.y + 1))
-                          .filter(p => p._1 >= 0 && p._2 >= 0 && p._1 < canvas.width && p._2 < canvas.height)
-                          .map(p => Pixel(p._1, p._2))
-    val adjacentPixelsToFill = adjacentPixels.filter(_.color == currentColor) // Get adjacent pixels with the same color
-    adjacentPixelsToFill.foldLeft(filledCanvas) { case (c, p) => draw_fill_recursive(Seq(p.toString, newColor.toString), c)._1 } // Fill adjacent pixels recursively
-    (filledCanvas, Status())
-  }
-}
-
-  def drawLine(arguments: Seq[String] ,canvas: Canvas): (Canvas, Status) = {
-    if (arguments.size > 3) 
-      (canvas, Status(error = true, message = "drawLine action does not excpect arguments"))
-    else {
-      val pixel1=Pixel(arguments(0))
-      val pixel2=Pixel(arguments(1))
-      //require(pixel1.x == pixel2.x || pixel1.y == pixel2.y, "Invalid line: must be horizontal or vertical")
-      if (pixel1.x == pixel2.x) {
-        // vertical line
-        val start = Math.min(pixel1.y, pixel2.y)
-        val end = Math.max(pixel1.x, pixel2.x)
-        val linePixels = (start to end).map(x => Pixel(x, pixel1.y,arguments(2).charAt(0))).toVector
-        val vline = canvas.updates(linePixels)
-        (vline,Status())
-      }
+    def drawLine(arguments: Seq[String], canvas: Canvas): (Canvas, Status) = {
+      // Vérifier que le nombre d'arguments est correct
+      if (arguments.size > 3) 
+        (canvas, Status(error = true, message = "drawLine action does not expect arguments"))
       else {
-        val start = Math.min(pixel1.x, pixel2.x)
-        val end = Math.max(pixel1.y, pixel2.y)
-        val linePixels = (start to end).map(y => Pixel(pixel1.x, y,arguments(2).charAt(0))).toVector
-        val hline = canvas.updates(linePixels)
-        (hline,Status())
-
-      }
-
-    }
-  }
-
-    def drawLine1(arguments: Seq[String] ,canvas: Canvas): (Canvas, Status) = {
-    if (arguments.size > 3) 
-      (canvas, Status(error = true, message = "drawLine action does not excpect arguments"))
-    else {
-      val pixel1=Pixel(arguments(0))
-      val pixel2=Pixel(arguments(1))
-      //require(pixel1.x == pixel2.x || pixel1.y == pixel2.y, "Invalid line: must be horizontal or vertical")
-      if (pixel1.x == pixel2.x) {
-        // vertical line
-        val start = Math.min(pixel1.y, pixel2.y)
-        val end = Math.max(pixel1.y, pixel2.y)
-        //val linePixels = (start to end).map(y => Pixel(pixel1.x, y)).toVector
-        val linePixels = Seq(Pixel(pixel1.x,start),Pixel(pixel1.x,end))
+        // Créer les deux pixels correspondant aux extrémités de la ligne à dessiner
+        val pixel1 = Pixel(arguments(0))
+        val pixel2 = Pixel(arguments(1))
         
-        val vline = canvas.updates(linePixels)
-        (vline,Status())
+        // Vérifier si la ligne est verticale ou horizontale
+        if (pixel1.x == pixel2.x) {
+          // Ligne verticale
+          // Calculer les coordonnées y de l'extrémité de départ et de fin de la ligne
+          val start = Math.min(pixel1.y, pixel2.y)
+          val end = Math.max(pixel1.y, pixel2.y)
+          // Créer une séquence de pixels correspondant à la ligne verticale et appliquer les MAJ
+          val linePixels = Seq(Pixel(pixel1.x, start), Pixel(pixel1.x, end))
+          val vline = canvas.updates(linePixels)
+          // Retourner le nouveau canvas et le statut sans erreur
+          (vline, Status())
+        }
+        else {
+          // Ligne horizontale
+          // Calculer les coordonnées x de l'extrémité de départ et de fin de la ligne
+          val start = Math.min(pixel1.x, pixel2.x)
+          val end = Math.max(pixel1.x, pixel2.x)
+          // Créer un vecteur de pixels correspondant à la ligne horizontale et appliquer les MAJ
+          val linePixels = (start to end).map(y => Pixel(pixel1.x, y)).toVector
+          val hline = canvas.updates(linePixels)
+          // Retourner le nouveau canvas et le statut sans erreur
+          (hline, Status())
+        }
       }
+    }
+
+  //**************Function drawRectangle*********************
+
+    def drawRectangle(arguments: Seq[String], canvas: Canvas): (Canvas, Status) = {
+    // Vérifie si la taille des arguments est supérieure à 3
+      if (arguments.size > 3) 
+        // Si la taille est supérieure à 3, retourne un tuple contenant le canvas et un statut d'erreur
+        (canvas, Status(error = true, message = "drawRectangle action does not expect arguments"))
       else {
-        val start = Math.min(pixel1.x, pixel2.x)
-        val end = Math.max(pixel1.x, pixel2.x)
-        val linePixels = (start to end).map(y => Pixel(pixel1.x, y)).toVector
-        val hline = canvas.updates(linePixels)
-        (hline,Status())
+        // Sinon, récupère les pixels des coins supérieurs et inférieurs du rectangle
+        val pixel1 = Pixel(arguments(0))
+        val pixel2 = Pixel(arguments(1))    
+        // Calcule les coordonnées des coins supérieur gauche et inférieur droit du rectangle
+        val topLeft = Pixel(math.min(pixel1.x, pixel2.x), math.min(pixel1.y, pixel2.y), arguments(2).charAt(0))
+        val bottomRight = Pixel(math.max(pixel1.x, pixel2.x), math.max(pixel1.y, pixel2.y), arguments(2).charAt(0))
 
+        // Crée une séquence de pixels horizontaux pour les côtés gauche et droit du rectangle
+        val horizontalPixels = (topLeft.x to bottomRight.x).map(x => Pixel(x, topLeft.y, arguments(2).charAt(0))) ++ 
+                                (topLeft.x to bottomRight.x).map(x => Pixel(x, bottomRight.y, arguments(2).charAt(0)))
+
+        // Crée une séquence de pixels verticaux pour les côtés supérieur et inférieur du rectangle
+        val verticalPixels = (topLeft.y to bottomRight.y).map(y => Pixel(topLeft.x, y, arguments(2).charAt(0))) ++ 
+                              (topLeft.y to bottomRight.y).map(y => Pixel(bottomRight.x, y, arguments(2).charAt(0)))
+
+        // Combine les séquences de pixels horizontaux et verticaux pour créer le rectangle
+        val rect = canvas.updates(horizontalPixels ++ verticalPixels)
+        // Retourne le canvas modifié et un statut de succès
+        (rect, Status())
       }
-
     }
-  }
 
-  def drawRectangle(arguments: Seq[String] ,canvas: Canvas): (Canvas, Status) = {
-    if (arguments.size > 3) 
-      (canvas, Status(error = true, message = "drawRectangle action does not excpect arguments"))
-    else {
-      val pixel1=Pixel(arguments(0))
-      val pixel2=Pixel(arguments(1))    
-      val topLeft = Pixel(math.min(pixel1.x, pixel2.x), math.min(pixel1.y, pixel2.y), arguments(2).charAt(0))
-      val bottomRight = Pixel(math.max(pixel1.x, pixel2.x), math.max(pixel1.y, pixel2.y), arguments(2).charAt(0))
+  //**************Function draw_fill*********************
 
-      val horizontalPixels = (topLeft.x to bottomRight.x).map(x => Pixel(x, topLeft.y, arguments(2).charAt(0))) ++ 
-                              (topLeft.x to bottomRight.x).map(x => Pixel(x, bottomRight.y, arguments(2).charAt(0)))
+  def draw_fill(arguments: Seq [String], canvas: Canvas): (Canvas, Status) = {
+    //val currentColor = Pixel(arguments(0)).color
+    val currentColor = Pixel(arguments(0)).color
+    val newColor=arguments(1).charAt(0) 
+    val pixel = Pixel(arguments(0))
+    if (currentColor == newColor) {
+      (canvas, Status()) // Si le pixel possede deja la nouvelle couleur, le canvas est renvoyé inchangé.
+    } else {
+      val filledCanvas = canvas.update(pixel.copy(color = newColor)) // Mise à jour du pixel actuel avec la nouvelle couleur
+      val adjacentPixels = List((pixel.x - 1, pixel.y), (pixel.x + 1, pixel.y), (pixel.x, pixel.y - 1), (pixel.x, pixel.y + 1))
+                            .filter(p => p._1 >= 0 && p._2 >= 0 && p._1 < canvas.width && p._2 < canvas.height)
+                            .map(p => Pixel(p._1, p._2))
+      val adjacentPixelsToFill = adjacentPixels.filter(_.color == currentColor) // Obtenir les pixels adjacents de même couleur
 
-      val verticalPixels = (topLeft.y to bottomRight.y).map(y => Pixel(topLeft.x, y, arguments(2).charAt(0))) ++ 
-                            (topLeft.y to bottomRight.y).map(y => Pixel(bottomRight.x, y, arguments(2).charAt(0)))
+      /*La ligne ci dessous est commenté car nous avons rencontré une exception à l'éxécute de l'action
+      Cela est dû aux arguments d'entrée de la fonction draw_fill (p.toString, newColor.toString ), nous avons pas pu trouver le bon format 
+      pour rentrer les raguments
+      */
 
-      val rect = canvas.updates(horizontalPixels ++ verticalPixels)
-      (rect,Status())
+      //adjacentPixelsToFill.foldLeft(filledCanvas) { case (c, p) => draw_fill(Seq(p.toString, newColor.toString), c)._1 } // Fill adjacent pixels recursively
+      (filledCanvas, Status())
     }
-    
-  }
+}
 
 
 
